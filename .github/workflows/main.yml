@@ -22,8 +22,15 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
 
-    - name: Build Debug APK with System Gradle
-      run: gradle assembleDebug
+    - name: Generate Gradle Wrapper if missing
+      run: |
+        if [ ! -f gradlew ]; then
+          gradle wrapper
+        fi
+        chmod +x gradlew
+
+    - name: Build Debug APK
+      run: ./gradlew assembleDebug
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
