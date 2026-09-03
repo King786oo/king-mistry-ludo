@@ -19,24 +19,40 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Create app folder & dummy google-services.json
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v3
+
+    - name: Create app folder & google-services.json
       run: |
         mkdir -p app
-        echo '{"project_info":{"project_number":"1234567890","project_id":"dummy-ludo","storage_bucket":"dummy.appspot.com"},"client":[{"client_info":{"mobilesdk_app_id":"1:1234567890:android:1234567890","android_client_info":{"package_name":"com.aistudio.ludoclassic.kmr"}},"oauth_client":[],"api_key":[{"current_key":"AIzaSyDummyKeyForBuildOnly"}]}]}' > app/google-services.json
+        cat << 'EOF' > app/google-services.json
+        {
+          "project_info": {
+            "project_number": "1234567890",
+            "project_id": "dummy-project",
+            "storage_bucket": "dummy.appspot.com"
+          },
+          "client": [
+            {
+              "client_info": {
+                "mobilesdk_app_id": "1:1234567890:android:1234567890",
+                "android_client_info": {
+                  "package_name": "com.aistudio.ludoclassic.kmr"
+                }
+              },
+              "oauth_client": [],
+              "api_key": [
+                {
+                  "current_key": "AIzaSyDummyKeyForBuildOnly12345"
+                }
+              ]
+            }
+          ]
+        }
+        EOF
 
-    - name: Make gradlew executable
-      run: |
-        if [ -f gradlew ]; then
-          chmod +x gradlew
-        fi
-
-    - name: Build Debug APK (Force Clean)
-      run: |
-        if [ -f gradlew ]; then
-          ./gradlew assembleDebug --continue -x check -x processDebugGoogleServices --stacktrace
-        else
-          gradle assembleDebug --continue -x check -x processDebugGoogleServices --stacktrace
-        fi
+    - name: Build Debug APK
+      run: gradle assembleDebug --no-daemon -Djava.awt.headless=true -Dorg.gradle.jvmargs="-Xmx3072m --add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED --add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED"
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
