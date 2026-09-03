@@ -1,0 +1,6 @@
+{
+  "name": "King Mistry",
+  "description": "Play royal Ludo with King Mistry, featuring custom flame-suit avatar, smart AI bots, and vibrant multiplayer board games.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
