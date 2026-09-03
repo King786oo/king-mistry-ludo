@@ -29,8 +29,14 @@ jobs:
         fi
         chmod +x gradlew
 
+    - name: Create dummy google-services.json if missing
+      run: |
+        if [ ! -f app/google-services.json ]; then
+          echo '{"project_info":{"project_number":"0","project_id":"dummy","storage_bucket":"dummy.appspot.com"},"client":[{"client_info":{"mobilesdk_app_id":"1:0:android:0","android_client_info":{"package_name":"com.example.app"}},"oauth_client":[],"api_key":[{"current_key":"dummy"}]}]}' > app/google-services.json
+        fi
+
     - name: Build Debug APK
-      run: ./gradlew assembleDebug -Dorg.gradle.jvmargs="-Xmx3072m --add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED --add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED"
+      run: ./gradlew assembleDebug -Djava.awt.headless=true -Dorg.gradle.jvmargs="-Xmx3072m --add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED --add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED"
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
