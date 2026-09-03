@@ -22,21 +22,14 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
 
-    - name: Generate Gradle Wrapper if missing
-      run: |
-        if [ ! -f gradlew ]; then
-          gradle wrapper
-        fi
-        chmod +x gradlew
-
     - name: Create matching google-services.json if missing
       run: |
         if [ ! -f app/google-services.json ]; then
           echo '{"project_info":{"project_number":"1234567890","project_id":"dummy-ludo","storage_bucket":"dummy.appspot.com"},"client":[{"client_info":{"mobilesdk_app_id":"1:1234567890:android:1234567890","android_client_info":{"package_name":"com.assturn.ludoclassic.kmr"}},"oauth_client":[],"api_key":[{"current_key":"AIzaSyDummyKeyForBuildOnly"}]}]}' > app/google-services.json
         fi
 
-    - name: Build Debug APK
-      run: ./gradlew assembleDebug -Djava.awt.headless=true -Dorg.gradle.jvmargs="-Xmx3072m --add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED --add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED"
+    - name: Build Debug APK with System Gradle
+      run: gradle assembleDebug -x check -Djava.awt.headless=true -Dorg.gradle.jvmargs="-Xmx3072m --add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED --add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED"
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
