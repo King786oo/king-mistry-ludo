@@ -1,3 +1,32 @@
-আমার GitHub রিপোজিটোরিতে Android APK তৈরির জন্য একটি GitHub Actions workflow (main.yml) সেটআপ করা আছে[span_0](start_span)[span_0](end_span)। কিন্তু গত বেশ কয়েকটি রান ধারাবাহিকভাব ফেইল করছে[span_1](start_span)[span_1](end_span), যার ফলে সঠিক APK ফাইল জেনারেট হচ্ছে না এবং ফোনে ইনস্টল করার সময় 'parsing the package' এরর দেখাচ্ছে[span_2](start_span)[span_2](end_span)। 
+name: Build Android App
 
-দয়া করে আমার main.yml ফাইলের সম্ভাব্য সমস্যাগুলো (যেমন: Java/JDK ভার্সন মিসম্যাচ, Gradle ভার্সন বা ক্যাশ সমস্যা, Gradle wrapper পারমিশন, অথবা Build টুলস বা SDK পাথ সমস্যা) চেক করে দিন এবং একটি সঠিক, কমপ্লিট ও কাজ করার মতো main.yml ফাইলের কোড লিখে দিন যাতে সফলভাবে APK বিল্ড হয়।
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    - name: Build with Gradle
+      run: ./gradlew assembleDebug
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v3
+      with:
+        name: app-debug
+        path: app/build/outputs/apk/debug/app-debug.apk
