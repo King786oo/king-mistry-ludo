@@ -19,14 +19,11 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v3
-
-    - name: Build with Auto Wrapper
+    - name: Build Fresh without Cache
       run: |
-        gradle wrapper --gradle-version 9.3.1
+        gradle wrapper --gradle-version 8.10.2
         chmod +x gradlew
-        ./gradlew assembleDebug --no-daemon --stacktrace
+        ./gradlew clean assembleDebug --no-daemon --no-build-cache --stacktrace
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
