@@ -19,16 +19,16 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
-
-    - name: Build with Gradle
-      run: ./gradlew assembleDebug --stacktrace
-      continue-on-error: true
-
-    - name: Fallback Build without Wrapper
-      if: always()
-      run: gradle assembleDebug --stacktrace
+    - name: Build with Subosito Android Action
+      uses: reactivecircus/android-emulator-runner@v2
+      with:
+        api-level: 29
+        target: default
+        arch: x86_64
+        force-avd-creation: false
+        emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+        disable-animations: true
+        script: ./gradlew assembleDebug --stacktrace
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
