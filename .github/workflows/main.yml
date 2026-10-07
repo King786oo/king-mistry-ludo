@@ -19,11 +19,11 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Build Fresh without Cache
+    - name: Build with Gradle 9.3.1
       run: |
-        gradle wrapper --gradle-version 8.10.2
+        gradle wrapper --gradle-version 9.3.1
         chmod +x gradlew
-        ./gradlew clean assembleDebug --no-daemon --no-build-cache --stacktrace
+        ./gradlew clean assembleDebug --no-daemon --stacktrace
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
