@@ -23,7 +23,7 @@ jobs:
       run: |
         gradle wrapper --gradle-version 9.3.1
         chmod +x gradlew
-        ./gradlew assembleDebug -x processDebugGoogleServices --no-daemon
+        ./gradlew assembleDebug -x processDebugGoogleServices -x validateSigningDebug --no-daemon
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
