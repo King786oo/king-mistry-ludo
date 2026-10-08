@@ -19,11 +19,14 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Generate Wrapper and Build 9.7.1
+    - name: Setup Gradle 9.7.1
+      uses: gradle/actions/setup-gradle@v3
+      with:
+        gradle-version: '9.7.1'
+
+    - name: Clean and Assemble Debug
       run: |
-        gradle wrapper --gradle-version 9.7.1
-        chmod +x gradlew
-        ./gradlew assembleDebug --no-daemon --stacktrace
+        ./gradlew clean assembleDebug --no-daemon --stacktrace
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
