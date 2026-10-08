@@ -19,18 +19,14 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Generate Wrapper and Build Safely
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v3
+
+    - name: Build with Gradle 9.7.1
       run: |
-        # Check files in root directory to locate gradle files
-        ls -la
-        
-        # If gradle wrapper does not exist, create it cleanly
-        if [ ! -f "gradlew" ]; then
-          gradle wrapper --gradle-version 8.10.2
-        fi
-        
+        gradle wrapper --gradle-version 9.7.1
         chmod +x gradlew
-        ./gradlew assembleDebug --no-daemon --stacktrace
+        ./gradlew assembleDebug --stacktrace
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
