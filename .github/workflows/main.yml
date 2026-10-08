@@ -19,11 +19,14 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Create Debug Keystore
+    - name: Create Debug Keystore in All Possible Paths
       run: |
         mkdir -p ~/.android
         keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+        
+        # প্রজেক্ট ফোল্ডারে এবং রুটেও কপি করে দেওয়া যাতে যেখান থেকেই হোক না কেন পেয়ে যায়
         cp ~/.android/debug.keystore app/debug.keystore
+        cp ~/.android/debug.keystore debug.keystore
 
     - name: Generate Wrapper and Build
       run: |
