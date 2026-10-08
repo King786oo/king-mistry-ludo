@@ -19,11 +19,18 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Fix Wrapper and Build
+    - name: Generate Wrapper and Build Safely
       run: |
-        echo "distributionUrl=https\://services.gradle.org/distributions/gradle-9.3.1-bin.zip" > gradle/wrapper/gradle-wrapper.properties
+        # Check files in root directory to locate gradle files
+        ls -la
+        
+        # If gradle wrapper does not exist, create it cleanly
+        if [ ! -f "gradlew" ]; then
+          gradle wrapper --gradle-version 8.10.2
+        fi
+        
         chmod +x gradlew
-        ./gradlew clean assembleDebug --no-daemon --stacktrace
+        ./gradlew assembleDebug --no-daemon --stacktrace
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
