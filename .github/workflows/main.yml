@@ -37,9 +37,11 @@ jobs:
         if [ -n "$GRADLE_PATH" ]; then
           DIR=$(dirname "$GRADLE_PATH")
           cd "$DIR"
-          ./gradlew assembleRelease --no-daemon -x processDebugGoogleServices -x validateSigningDebug
+                    ./gradlew assembleRelease --no-daemon -x processReleaseGoogleServices -x validateSigningDebug
+
         else
-          gradle assembleRelease --no-daemon -x processDebugGoogleServices -x validateSigningDebug
+                    gradle assembleRelease --no-daemon -x processReleaseGoogleServices -x validateSigningDebug
+ 
         fi
 
     - name: Upload APK Artifact
