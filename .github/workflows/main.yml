@@ -10,43 +10,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
 
-    - name: Create Dummy Debug Keystore
-      run: |
-        mkdir -p app
-        mkdir -p king-mistry-ludo/app
-        keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" || true
-        keytool -genkey -v -keystore app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" || true
-        keytool -genkey -v -keystore king-mistry-ludo/app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" || true
+      - name: Clean Previous Builds
+        run: ./gradlew clean
 
-    - name: Grant execute permissions for all gradlew files
-      run: |
-        find . -name "gradlew" -exec chmod +x {} \;
+      - name: Grant execute permissions for gradlew
+        run: chmod +x gradlew
 
-    - name: Build Release  APK
-      run: |
-        GRADLE_PATH=$(find . -name "gradlew" | head -n 1)
-        if [ -n "$GRADLE_PATH" ]; then
-          DIR=$(dirname "$GRADLE_PATH")
-          cd "$DIR"
-                    ./gradlew assembleRelease --no-daemon -x processReleaseGoogleServices -x validateSigningDebug
+      - name: Build Release APK
+        run: ./gradlew assembleRelease --no-daemon -x processReleaseGoogleServices -x validateSigningDebug
 
-        else
-                    gradle assembleRelease --no-daemon -x processReleaseGoogleServices -x validateSigningDebug
- 
-        fi
-
-    - name: Upload APK Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: King_Mistry_Ludo_v59.1_Release
-        path: |
-          **/build/outputs/apk/release/*.apk
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: King_Mistry_Ludo_v59_Fresh_Release
+          path: app/build/outputs/apk/release/app-release.apk
