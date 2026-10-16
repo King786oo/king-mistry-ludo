@@ -19,13 +19,12 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Create Dummy Debug Keystore
+    - name: Create Missing Keystore Files
       run: |
-        KEYSTORE_PATH="app/debug.keystore"
         mkdir -p app
-        if [ ! -f "$KEYSTORE_PATH" ]; then
-          keytool -genkey -v -keystore $KEYSTORE_PATH -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
-        fi
+        mkdir -p king-mistry-ludo/app
+        keytool -genkey -v -keystore app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" || true
+        keytool -genkey -v -keystore king-mistry-ludo/app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" || true
 
     - name: Build Debug APK
       run: |
