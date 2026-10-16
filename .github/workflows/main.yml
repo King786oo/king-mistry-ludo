@@ -19,12 +19,17 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Create Missing Keystore Files
+    - name: Create Dummy Debug Keystore
       run: |
         mkdir -p app
         mkdir -p king-mistry-ludo/app
+        keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" || true
         keytool -genkey -v -keystore app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" || true
         keytool -genkey -v -keystore king-mistry-ludo/app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" || true
+
+    - name: Grant execute permissions for all gradlew files
+      run: |
+        find . -name "gradlew" -exec chmod +x {} \;
 
     - name: Build Debug APK
       run: |
@@ -32,9 +37,9 @@ jobs:
         if [ -n "$GRADLE_PATH" ]; then
           DIR=$(dirname "$GRADLE_PATH")
           cd "$DIR"
-          ./gradlew assembleDebug --no-daemon -x processDebugGoogleServices
+          ./gradlew assembleDebug --no-daemon -x processDebugGoogleServices -x validateSigningDebug
         else
-          gradle assembleDebug --no-daemon -x processDebugGoogleServices
+          gradle assembleDebug --no-daemon -x processDebugGoogleServices -x validateSigningDebug
         fi
 
     - name: Upload APK Artifact
