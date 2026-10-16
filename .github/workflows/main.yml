@@ -31,15 +31,15 @@ jobs:
       run: |
         find . -name "gradlew" -exec chmod +x {} \;
 
-    - name: Build Debug APK
+    - name: Build Release  APK
       run: |
         GRADLE_PATH=$(find . -name "gradlew" | head -n 1)
         if [ -n "$GRADLE_PATH" ]; then
           DIR=$(dirname "$GRADLE_PATH")
           cd "$DIR"
-          ./gradlew assembleDebug --no-daemon -x processDebugGoogleServices -x validateSigningDebug
+          ./gradlew assembleRelease --no-daemon -x processDebugGoogleServices -x validateSigningDebug
         else
-          gradle assembleDebug --no-daemon -x processDebugGoogleServices -x validateSigningDebug
+          gradle assembleRelease --no-daemon -x processDebugGoogleServices -x validateSigningDebug
         fi
 
     - name: Upload APK Artifact
@@ -47,5 +47,4 @@ jobs:
       with:
         name: King_Mistry_Ludo_v59.1_Release
         path: |
-          **/build/outputs/apk/debug/*.apk
           **/build/outputs/apk/release/*.apk
