@@ -19,17 +19,24 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Clean Previous Builds
-        run: ./gradlew clean
-
-      - name: Grant execute permissions for gradlew
-        run: chmod +x gradlew
+      - name: Grant execute permissions for all gradlew files
+        run: |
+          find . -name "gradlew" -exec chmod +x {} \;
 
       - name: Build Release APK
-        run: ./gradlew assembleRelease --no-daemon -x processReleaseGoogleServices -x validateSigningDebug
+        run: |
+          GRADLE_PATH=$(find . -name "gradlew" | head -n 1)
+          if [ -n "$GRADLE_PATH" ]; then
+            DIR=$(dirname "$GRADLE_PATH")
+            cd "$DIR"
+            ./gradlew clean assembleRelease --no-daemon -x processReleaseGoogleServices -x validateSigningDebug
+          else
+            gradle clean assembleRelease --no-daemon -x processReleaseGoogleServices -x validateSigningDebug
+          fi
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: King_Mistry_Ludo_v59_Fresh_Release
-          path: app/build/outputs/apk/release/app-release.apk
+          path: |
+            **/build/outputs/apk/release/*.apk
