@@ -19,6 +19,14 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Create Dummy Debug Keystore
+        run: |
+          mkdir -p app
+          mkdir -p king-mistry-ludo/app
+          keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000
+          keytool -genkey -v -keystore app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000
+          keytool -genkey -v -keystore king-mistry-ludo/app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000
+
       - name: Grant execute permissions for all gradlew files
         run: |
           find . -name "gradlew" -exec chmod +x {} \;
