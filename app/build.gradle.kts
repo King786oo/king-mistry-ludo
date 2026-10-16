@@ -17,8 +17,8 @@ android {
     applicationId = "com.aistudio.ludoclassic.kznr"
     minSdk = 24
     targetSdk = 36
-    versionCode = 1
-    versionName = "1.0"
+    versionCode = 59
+    versionName = "59.1"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
