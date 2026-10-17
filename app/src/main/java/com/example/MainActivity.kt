@@ -52,7 +52,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun LudoApp(viewModel: LudoViewModel) {
-    // Force direct launch into MENU for v59.0 Production Build
+    // Force directly into MENU screen on app launch
     var currentScreen by remember { mutableStateOf(ScreenState.MENU) }
     var showMenuRulesDialog by remember { mutableStateOf(false) }
 
@@ -80,7 +80,6 @@ fun LudoApp(viewModel: LudoViewModel) {
                 LudoMenuScreen(
                     isBengali = gameState.isBengali,
                     onStartGame = { mode, playerCount, names, botFlags ->
-                        viewModel.startGame(mode, playerCount, names, botFlags)
                         currentScreen = ScreenState.GAME
                     },
                     onOpenStats = {
