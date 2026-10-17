@@ -23,9 +23,10 @@ jobs:
         run: |
           mkdir -p app
           mkdir -p king-mistry-ludo/app
-          keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000
-          keytool -genkey -v -keystore app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000
-          keytool -genkey -v -keystore king-mistry-ludo/app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000
+          DNAME="CN=Android Debug, OU=Android, O=Android, L=US, ST=CA, C=US"
+          keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "$DNAME"
+          keytool -genkey -v -keystore app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "$DNAME"
+          keytool -genkey -v -keystore king-mistry-ludo/app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "$DNAME"
 
       - name: Grant execute permissions for all gradlew files
         run: |
