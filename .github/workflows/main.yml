@@ -25,10 +25,10 @@ jobs:
         keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
 
     - name: Grant execute permissions for all gradlew files
-      run: chmod +x gradlew
+      run: test -f gradlew && chmod +x gradlew || echo "gradlew not found, skipping chmod"
 
     - name: Build Release APK
-      run: ./gradlew assembleRelease
+      run: test -f gradlew && ./gradlew assembleRelease || gradle assembleRelease
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
