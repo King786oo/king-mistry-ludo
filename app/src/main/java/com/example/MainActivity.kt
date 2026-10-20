@@ -18,7 +18,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import com.example.model.GameMode
 import com.example.ui.LudoViewModel
 import com.example.ui.components.RulesDialog
 import com.example.ui.screens.LudoGameScreen
@@ -78,7 +77,7 @@ fun LudoApp(viewModel: LudoViewModel) {
             ScreenState.MENU -> {
                 LudoMenuScreen(
                     isBengali = gameState.isBengali,
-                    onStartGame = { mode: GameMode, playerCount: Int, names: List<String>, botFlags: List<Boolean> ->
+                    onStartGame = { mode, playerCount, names, botFlags ->
                         viewModel.startNewGame(mode, playerCount, names, botFlags)
                         currentScreen = ScreenState.GAME
                     },
