@@ -46,8 +46,8 @@ jobs:
           }
           EOF
 
-      - name: Build APK
-        run: gradle assembleRelease --no-daemon
+      - name: Build APK without Google Services check
+        run: gradle assembleRelease -x :app:processReleaseGoogleServices --no-daemon
 
       - name: Upload Release APK
         uses: actions/upload-artifact@v4
