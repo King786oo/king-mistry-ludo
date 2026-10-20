@@ -46,11 +46,9 @@ jobs:
           }
           EOF
 
-      - name: Build APK without Google Services check
-        run: gradle assembleRelease -x :app:processReleaseGoogleServices --no-daemon
+      - name: Generate Dummy Keystore
+        run: |
+          keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" || true
 
-      - name: Upload Release APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-apk
-          path: app/build/outputs/apk/release/*.apk
+      - name: Build Debug APK
+        run: gradle assembleDebug -x :app
