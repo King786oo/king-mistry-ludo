@@ -18,9 +18,7 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-
-      - name: Setup Gradle
-        uses: gradle/gradle-build-action@v2
+          cache: gradle
 
       - name: Bypass Google Services Check
         run: |
@@ -46,5 +44,14 @@ jobs:
           }
           EOF
 
-      - name: Build APK (Ignore Google Services Task)
-        run: gradle assembleRelease -x processRelease
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew || true
+
+      - name: Build with Gradle Wrapper
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Upload Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk
+          path: app/build/outputs/apk/release/*.apk
