@@ -46,11 +46,5 @@ jobs:
           }
           EOF
 
-      - name: Build APK with Gradle Action
-        run: gradle assembleRelease
-
-      - name: Upload Release APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-apk
-          path: app/build/outputs/apk/release/*.apk
+      - name: Build APK (Ignore Google Services Task)
+        run: gradle assembleRelease -x processRelease
