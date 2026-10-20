@@ -35,7 +35,23 @@ jobs:
                 "client_info": {
                   "mobilesdk_app_id": "1:123456789012:android:abcdef1234567890",
                   "android_client_info": {
-                    "package_name": "com.aistudio.ludoclassic.kznr"
+                    "package_name": "com.aistudio.ludoclassic.kzv"
                   }
                 },
-                "oauth_client": [],
+                "oauth_client": []
+              }
+            ]
+          }
+          EOF
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build with Gradle
+        run: ./gradlew assembleRelease
+
+      - name: Upload Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk
+          path: app/build
