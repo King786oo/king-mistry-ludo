@@ -25,7 +25,7 @@ import com.example.ui.screens.LudoMenuScreen
 import com.example.ui.screens.LudoStatsScreen
 import com.example.ui.screens.NasidulProfileDashboardScreen
 import com.example.ui.theme.MyApplicationTheme
-import com.example.ui.screens.GameMode
+import com.example.model.GameMode
 
 enum class ScreenState {
     HOME_PROFILE,
@@ -87,36 +87,3 @@ fun LudoApp(viewModel: LudoViewModel) {
                     },
                     onToggleLanguage = {
                         viewModel.toggleLanguage()
-                    },
-                    onOpenRules = {
-                        showMenuRulesDialog = true
-                    }
-                )
-            }
-            ScreenState.GAME -> {
-                LudoGameScreen(
-                    viewModel = viewModel,
-                    onBackToMenu = {
-                        currentScreen = ScreenState.MENU
-                    }
-                )
-            }
-            ScreenState.STATS -> {
-                LudoStatsScreen(
-                    stats = stats,
-                    isBengali = gameState.isBengali,
-                    onBack = {
-                        currentScreen = ScreenState.MENU
-                    }
-                )
-            }
-        }
-    }
-
-    if (showMenuRulesDialog) {
-        RulesDialog(
-            isBengali = gameState.isBengali,
-            onDismiss = { showMenuRulesDialog = false }
-        )
-    }
-}
