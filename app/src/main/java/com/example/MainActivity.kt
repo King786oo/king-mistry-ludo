@@ -116,7 +116,4 @@ fun LudoApp(viewModel: LudoViewModel) {
     if (showMenuRulesDialog) {
         RulesDialog(
             isBengali = gameState.isBengali,
-            onDismiss = { showMenuRulesDialog = false }
-        )
-    }
-}
+            onDismiss = { show
