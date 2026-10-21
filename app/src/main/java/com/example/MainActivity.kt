@@ -25,7 +25,7 @@ import com.example.ui.screens.LudoMenuScreen
 import com.example.ui.screens.LudoStatsScreen
 import com.example.ui.screens.NasidulProfileDashboardScreen
 import com.example.ui.theme.MyApplicationTheme
-import com.example.model.GameMode
+import com.example.ui.screens.GameMode
 
 enum class ScreenState {
     HOME_PROFILE,
