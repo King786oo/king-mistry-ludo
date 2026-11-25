@@ -2398,3 +2398,2344 @@ fun LudoMenuScreen(
                         isOnlineTab,
                         1,
                         if (isOnlineTab) 500 else 0,
+                        chosenMode
+                    )
+                } catch (t: Throwable) {
+                    android.util.Log.e("LudoMenuScreen", "Failed starting Carrom Pool match", t)
+                    showCarromPoolDialog = false
+                }
+            },
+            onDismiss = {
+                showCarromPoolDialog = false
+            }
+        )
+    }
+
+    // 12B. Carrom League 3-Mode Selection Dialog (Standard, No Queen, Foggy 160)
+    if (showCarromLeagueModeDialog) {
+        CarromLeagueModeSelectionDialog(
+            language = language,
+            onSelectMode = { chosenMode ->
+                selectedCarromGameMode = chosenMode
+                showCarromLeagueModeDialog = false
+                showCarromTourneyDialog = true
+            },
+            onDismiss = {
+                showCarromLeagueModeDialog = false
+            }
+        )
+    }
+
+    // 13. Carrom Championship Tournament Multi-Tier Selection Dialog
+    if (showCarromTourneyDialog) {
+        CarromTourneyLoungeDialog(
+            isOnline = isOnlineTab,
+            language = language,
+            userName = userName,
+            carromMode = selectedCarromGameMode,
+            onSelectTier = { tier ->
+                showCarromTourneyDialog = false
+                selectedCarromTierForMatchmaking = tier
+                showCarromMatchmakingDialog = true
+            },
+            onDismiss = {
+                showCarromTourneyDialog = false
+            }
+        )
+    }
+
+    // 14. Carrom Instant Matchmaking with AI Bot Fallback Dialog (5-8s Online Search, AI Bot fallback at 8s)
+    val activeCarromTier = selectedCarromTierForMatchmaking
+    if (showCarromMatchmakingDialog && activeCarromTier != null) {
+        val tierSnapshot = activeCarromTier
+        val modeSnapshot = selectedCarromGameMode
+        CarromMatchmakingDialog(
+            tier = tierSnapshot,
+            isOnline = isOnlineTab,
+            userName = userName,
+            language = language,
+            carromMode = modeSnapshot,
+            onMatchFound = { opponentName, isBot ->
+                try {
+                    showCarromMatchmakingDialog = false
+                    selectedCarromTierForMatchmaking = null
+                } catch (_: Throwable) {}
+                try {
+                    soundManager.playButtonClick()
+                } catch (_: Throwable) {}
+                try {
+                    Toast.makeText(
+                        context,
+                        if (language == AppLanguage.BENGALI)
+                            "${tierSnapshot.nameBn} টুর্নামেন্ট শুরু হয়েছে! প্রতিপক্ষ: ${opponentName.ifBlank { "Nasidul Mistry" }}"
+                        else
+                            "${tierSnapshot.name} (${modeSnapshot.titleEn}) Started! Opponent: ${opponentName.ifBlank { "Nasidul Mistry" }}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                } catch (_: Throwable) {}
+                // Launch into dedicated 3D Carrom Game Screen with fallback to valid defaults on any error
+                try {
+                    onStartCarromGame(
+                        true,
+                        "${tierSnapshot.name.ifBlank { "CARROM ARENA" }} • ${modeSnapshot.titleEn.ifBlank { "STANDARD CARROM" }}",
+                        tierSnapshot.totalPool.coerceAtLeast(0),
+                        userName.ifBlank { "Player 1" },
+                        opponentName.ifBlank { "Nasidul Mistry" },
+                        isBot,
+                        1,
+                        tierSnapshot.entryFee.coerceAtLeast(0),
+                        modeSnapshot
+                    )
+                } catch (t: Throwable) {
+                    android.util.Log.e("LudoMenuScreen", "Primary Carrom launch error, applying safe defaults", t)
+                    try {
+                        onStartCarromGame(
+                            true,
+                            "CARROM ARENA • STANDARD CARROM",
+                            0,
+                            "Player 1",
+                            "Nasidul Mistry",
+                            true,
+                            1,
+                            0,
+                            CarromGameMode.STANDARD
+                        )
+                    } catch (fallbackErr: Throwable) {
+                        android.util.Log.e("LudoMenuScreen", "Fallback Carrom launch error", fallbackErr)
+                    }
+                }
+            },
+            onCancel = {
+                try {
+                    CoinManager.addCoins(tierSnapshot.entryFee, "Matchmaking Cancelled Refund")
+                } catch (_: Throwable) {}
+                showCarromMatchmakingDialog = false
+                selectedCarromTierForMatchmaking = null
+            }
+        )
+    }
+}
+
+/**
+ * High-End Single-Screen Game Mode Card.
+ * Proportioned to dynamically flex and fit without scrolling.
+ */
+/**
+ * Slim, horizontal rectangular card with yellow border (Exact Replica of 104683.png)
+ * - Upper section: Deep royal navy with horizontal golden speed flare, centered badges, and orange '!' circle
+ * - Bottom section: Vibrant glowing metallic yellow-gold banner with bold black text
+ */
+@Composable
+private fun SlimLudoModeCard(
+    modifier: Modifier = Modifier,
+    bannerTitle: String,
+    onClick: () -> Unit,
+    onInfoClick: () -> Unit,
+    testTag: String,
+    contentBadges: @Composable () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = Color(0xFF021634),
+        border = BorderStroke(2.2.dp, Brush.linearGradient(listOf(Color(0xFFFFEA00), Color(0xFFFFD54F), Color(0xFFFF9100), Color(0xFFFFEA00)))), // 3D Glowing Royal Gold Frame
+        shadowElevation = 8.dp,
+        modifier = modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(14.dp),
+                spotColor = Color(0xFFFFD54F),
+                ambientColor = Color(0xFFFFB300)
+            )
+            .clickable(onClick = onClick)
+            .testTag(testTag)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // 1. UPPER SECTION: Deep navy background with badges, laser speed flare, and orange '!' button (50% Balanced Proportion)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(0.50f)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color(0xFF021B42), Color(0xFF001026))
+                        ),
+                        shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
+                    )
+            ) {
+                // Horizontal glowing speed flare beams extending left and right from center badges
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(20.dp)
+                        .align(Alignment.Center)
+                ) {
+                    val midY = size.height / 2f
+                    val w = size.width
+
+                    // Left pair of tapering neon speed streaks
+                    val leftBrush = Brush.horizontalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color(0x2200E5FF),
+                            Color(0x8800E5FF),
+                            Color(0xFFFFD54F),
+                            Color(0xFFFFEA00)
+                        ),
+                        startX = 0f,
+                        endX = w * 0.28f
+                    )
+                    drawLine(
+                        brush = leftBrush,
+                        start = Offset(w * 0.04f, midY - 3.dp.toPx()),
+                        end = Offset(w * 0.28f, midY - 3.dp.toPx()),
+                        strokeWidth = 2.4.dp.toPx(),
+                        cap = StrokeCap.Round
+                    )
+                    drawLine(
+                        brush = leftBrush,
+                        start = Offset(w * 0.09f, midY + 3.dp.toPx()),
+                        end = Offset(w * 0.28f, midY + 3.dp.toPx()),
+                        strokeWidth = 1.8.dp.toPx(),
+                        cap = StrokeCap.Round
+                    )
+
+                    // Right pair of tapering neon speed streaks
+                    val rightBrush = Brush.horizontalGradient(
+                        colors = listOf(
+                            Color(0xFFFFEA00),
+                            Color(0xFFFFD54F),
+                            Color(0x8800E5FF),
+                            Color(0x2200E5FF),
+                            Color.Transparent
+                        ),
+                        startX = w * 0.72f,
+                        endX = w * 0.96f
+                    )
+                    drawLine(
+                        brush = rightBrush,
+                        start = Offset(w * 0.72f, midY - 3.dp.toPx()),
+                        end = Offset(w * 0.96f, midY - 3.dp.toPx()),
+                        strokeWidth = 2.4.dp.toPx(),
+                        cap = StrokeCap.Round
+                    )
+                    drawLine(
+                        brush = rightBrush,
+                        start = Offset(w * 0.72f, midY + 3.dp.toPx()),
+                        end = Offset(w * 0.91f, midY + 3.dp.toPx()),
+                        strokeWidth = 1.8.dp.toPx(),
+                        cap = StrokeCap.Round
+                    )
+                }
+
+                // Center badges & icons
+                Row(
+                    modifier = Modifier.align(Alignment.Center),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    contentBadges()
+                }
+
+                // Top right orange circle with '!' icon matching screenshot
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 4.dp, end = 6.dp)
+                        .size(19.dp)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color(0xFFFF9100), Color(0xFFFF6D00))
+                            )
+                        )
+                        .border(1.dp, Color(0xFFFFD54F), CircleShape)
+                        .clickable { onInfoClick() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "!",
+                        color = Color.White,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 11.5.sp,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+
+            // 2. BOTTOM SECTION: Glowing metallic gold banner with bold, prominent text (50% Balanced Proportion)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(0.50f)
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(
+                                Color(0xFFFFEA00),
+                                Color(0xFFFFD600),
+                                Color(0xFFFFAB00),
+                                Color(0xFFFF8F00),
+                                Color(0xFFFFAB00),
+                                Color(0xFFFFD600),
+                                Color(0xFFFFEA00)
+                            )
+                        ),
+                        shape = RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = bannerTitle,
+                    color = Color(0xFF07111E),
+                    fontWeight = FontWeight.Black,
+                    fontSize = 14.5.sp,
+                    letterSpacing = 1.2.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Open Token Badge Overlay: Displays 4 colored tokens (Red, Green, Yellow, Blue) with stars
+ */
+@Composable
+private fun OpenTokenBadgeOverlay() {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = Modifier.padding(2.dp)
+    ) {
+        listOf(
+            Color(0xFFE53935) to "★",
+            Color(0xFF43A047) to "★",
+            Color(0xFFFDD835) to "★",
+            Color(0xFF1E88E5) to "★"
+        ).forEach { (color, symbol) ->
+            Box(
+                modifier = Modifier
+                    .size(22.dp)
+                    .clip(CircleShape)
+                    .background(color)
+                    .border(1.2.dp, Color(0xFFFFD700), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(symbol, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Black)
+            }
+        }
+    }
+}
+
+/**
+ * Premium 3D Dark-Glass Royale Game Mode Card
+ * Features:
+ * - Royal navy-blue glassmorphic background (#091426)
+ * - Radiant metallic gold / neon cyan border
+ * - Consistent card proportions with responsive sizing
+ * - Upper section: High-resolution artwork with gradient blend, top-left glowing badge, top-right info trigger
+ * - Lower section: Royal gold title, crisp readable subtitle, embossed glass typography
+ */
+@Composable
+private fun RoyaleGameModeCard(
+    modifier: Modifier = Modifier,
+    title: String,
+    subtitle: String? = null,
+    badgeText: String? = null,
+    badgeColor: Color = Color(0xFFFFD700),
+    artworkResId: Int? = null,
+    artworkScale: ContentScale = ContentScale.Crop,
+    isOffline: Boolean = false,
+    onClick: () -> Unit,
+    onInfoClick: (() -> Unit)? = null,
+    testTag: String,
+    contentBadges: (@Composable () -> Unit)? = null
+) {
+    val frameBorder = if (isOffline) {
+        Brush.linearGradient(
+            listOf(
+                Color(0xFFFFEA00),
+                Color(0xFFFFD54F),
+                Color(0xFFFF8F00),
+                Color(0xFFFFF9C4),
+                Color(0xFFFFD700)
+            )
+        )
+    } else {
+        Brush.linearGradient(
+            listOf(
+                Color(0xFF00E5FF),
+                Color(0xFFFFD700),
+                Color(0xFF00B0FF),
+                Color(0xFF80D8FF),
+                Color(0xFF00E5FF)
+            )
+        )
+    }
+
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(16.dp),
+        color = Color(0xFF091426),
+        border = BorderStroke(2.dp, frameBorder),
+        shadowElevation = 8.dp,
+        modifier = modifier
+            .shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(16.dp),
+                spotColor = if (isOffline) Color(0xFFFFD54F).copy(alpha = 0.5f) else Color(0xFF00E5FF).copy(alpha = 0.5f),
+                ambientColor = if (isOffline) Color(0xFFFF8F00).copy(alpha = 0.3f) else Color(0xFF0091EA).copy(alpha = 0.3f)
+            )
+            .testTag(testTag)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color(0xFF0E2244),
+                            Color(0xFF091426),
+                            Color(0xFF050D1C)
+                        )
+                    )
+                )
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                // Upper Section: 3D Artwork (clean, unobstructed 64%)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(0.64f)
+                        .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (artworkResId != null) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(artworkResId)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = title,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = artworkScale
+                        )
+                    }
+
+                    if (contentBadges != null) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color(0x77041022)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            contentBadges()
+                        }
+                    }
+
+                    // Glass gradient fade into bottom title pill
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(18.dp)
+                            .align(Alignment.BottomCenter)
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(Color.Transparent, Color(0x99091426))
+                                )
+                            )
+                    )
+
+                    // Top-Right Info Button with generous touch area
+                    if (onInfoClick != null) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .size(32.dp)
+                                .clickable(onClick = onInfoClick),
+                            contentAlignment = Alignment.TopEnd
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .padding(top = 4.dp, end = 5.dp)
+                                    .size(18.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        Brush.verticalGradient(
+                                            listOf(Color(0xFFFF9800), Color(0xFFE65100))
+                                        )
+                                    )
+                                    .border(1.dp, Color(0xFFFFD54F), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "!",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 10.sp,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Lower Section: 3D Yellow Ribbon Banner with Bold Solid Black Uppercase Title strictly matching 115601.png & 115602.png
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(0.36f)
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color(0xFFFFEA00), // Brilliant Golden Yellow highlight
+                                    Color(0xFFFFD54F), // Vibrant Gold
+                                    Color(0xFFFFB300), // Amber Gold
+                                    Color(0xFFFF8F00)  // Deep Amber base
+                                )
+                            ),
+                            shape = RoundedCornerShape(bottomStart = 14.dp, bottomEnd = 14.dp)
+                        )
+                        .border(
+                            width = 1.dp,
+                            brush = Brush.verticalGradient(
+                                listOf(Color(0xFFFFFDE7), Color(0xFFFFD54F), Color(0xFFFF6F00))
+                            ),
+                            shape = RoundedCornerShape(bottomStart = 14.dp, bottomEnd = 14.dp)
+                        )
+                        .padding(horizontal = 4.dp, vertical = 2.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = title.uppercase(),
+                        color = Color(0xFF150A00), // Deepest solid black/espresso
+                        fontWeight = FontWeight.Black,
+                        fontSize = if (title.length > 15) 12.sp else 13.5.sp,
+                        letterSpacing = 0.6.sp,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Legacy GridLudoModeCard backwards-compatible wrapper
+ */
+@Composable
+private fun GridLudoModeCard(
+    modifier: Modifier = Modifier,
+    bannerTitle: String,
+    artworkResId: Int? = null,
+    isOffline: Boolean = false,
+    onClick: () -> Unit,
+    onInfoClick: () -> Unit,
+    testTag: String,
+    contentBadges: (@Composable () -> Unit)? = null
+) {
+    RoyaleGameModeCard(
+        modifier = modifier,
+        title = bannerTitle,
+        subtitle = if (isOffline) "Offline Match" else "Online Match",
+        artworkResId = artworkResId,
+        isOffline = isOffline,
+        onClick = onClick,
+        onInfoClick = onInfoClick,
+        testTag = testTag,
+        contentBadges = contentBadges
+    )
+}
+
+@Composable
+private fun TeamVsTeamEmblemBadge() {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        ColoredUserBadge(Color(0xFFE52521))
+        Surface(
+            shape = RoundedCornerShape(7.dp),
+            color = Color(0xFF041C38),
+            border = BorderStroke(1.8.dp, Brush.linearGradient(listOf(Color(0xFFFFD700), Color(0xFFFF9100)))),
+            modifier = Modifier.height(26.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text("👑", fontSize = 11.sp)
+                Text(
+                    text = "VS",
+                    color = Color(0xFFFFD54F),
+                    fontWeight = FontWeight.Black,
+                    fontSize = 11.sp
+                )
+            }
+        }
+        ColoredUserBadge(Color(0xFF0078D7))
+    }
+}
+
+/**
+ * Integrated Modal Hub for 🛒 Shop Button:
+ * 1. Dice Skins / Customization
+ * 2. Pawn / Token Customization
+ * 3. Instant Coin Loan System
+ */
+@Composable
+private fun RoyalShopModalHubDialog(
+    language: AppLanguage,
+    onDismiss: () -> Unit,
+    onOpenDiceSkins: () -> Unit,
+    onOpenTokens: () -> Unit,
+    onOpenCoinLoan: () -> Unit,
+    onOpenPuckSets: () -> Unit,
+    onOpenStrikers: () -> Unit
+) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        BackHandler {
+            onDismiss()
+        }
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = Color(0xFF091426),
+            border = BorderStroke(2.dp, Brush.linearGradient(listOf(Color(0xFFFFD700), Color(0xFF00E5FF), Color(0xFFFFD700)))),
+            shadowElevation = 16.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(18.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("🛒", fontSize = 22.sp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (language == AppLanguage.BENGALI) "রয়্যাল শপ ও কাস্টমাইজেশন" else "ROYAL SHOP & CUSTOMIZATION",
+                            color = Color(0xFFFFD700),
+                            fontWeight = FontWeight.Black,
+                            fontSize = 14.sp
+                        )
+                    }
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.minimumInteractiveComponentSize()
+                    ) {
+                        Icon(Icons.Filled.Close, contentDescription = "Close", tint = Color.White)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Option 1: Carrom 4K Striker Arsenal
+                ShopHubOptionCard(
+                    icon = "🎯",
+                    title = if (language == AppLanguage.BENGALI) "ক্যারাম ৪কে স্ট্রাইকার আর্সেনাল" else "4K Carrom Striker Arsenal",
+                    subtitle = if (language == AppLanguage.BENGALI) "${com.example.model.CarromStriker.entries.size}টি আল্ট্রা-এইচডি ফ্লোরাল, রয়্যাল ও মিথিক স্ট্রাইকার" else "${com.example.model.CarromStriker.entries.size} Ultra-HD 4K Floral, Royal & Mythic Strikers",
+                    badge = "${com.example.model.CarromStriker.entries.size} TOTAL",
+                    badgeColor = Color(0xFFFFD700),
+                    onClick = {
+                        onDismiss()
+                        onOpenStrikers()
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Option 2: Carrom Master Puck Sets (High-Resolution 9-Piece Clusters)
+                ShopHubOptionCard(
+                    icon = "⚪",
+                    title = if (language == AppLanguage.BENGALI) "ক্যারাম গুটিক কালেকশন" else "Carrom Master Puck Sets",
+                    subtitle = if (language == AppLanguage.BENGALI) "২৭টি লেজেন্ডারি ক্লাস্টার সেট ও লাইভ স্ট্যাট বুস্ট" else "27 Legendary 9-piece clusters & live stat boosts",
+                    badge = "27 SETS",
+                    badgeColor = Color(0xFF00E676),
+                    onClick = {
+                        onDismiss()
+                        onOpenPuckSets()
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Option 3: Dice Collection & Custom Studio
+                ShopHubOptionCard(
+                    icon = "🎲",
+                    title = if (language == AppLanguage.BENGALI) "৩ডি ডাইস কালেকশন ও স্টুডিও" else "3D Dice Vault & Studio",
+                    subtitle = if (language == AppLanguage.BENGALI) "অফিসিয়াল ৩ডি ডাইস সক্রিয় • কাস্টম স্টুডিও প্রস্তুত" else "Official Match 3D Dice active • Custom studio ready",
+                    badge = "OFFICIAL",
+                    badgeColor = Color(0xFF00E5FF),
+                    onClick = {
+                        onDismiss()
+                        onOpenDiceSkins()
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Option 4: Pawn / Token Customization
+                ShopHubOptionCard(
+                    icon = "♟️",
+                    title = if (language == AppLanguage.BENGALI) "গুটি / টোকেন কাস্টমাইজেশন" else "3D Pawns & Token Customization",
+                    subtitle = if (language == AppLanguage.BENGALI) "কিং, ড্রাগন, সাইবার ও ডায়মন্ড গুটি" else "Royal King, Dragon, Cyber & Gold Pawns",
+                    badge = "PAWNS",
+                    badgeColor = Color(0xFFFF4081),
+                    onClick = {
+                        onDismiss()
+                        onOpenTokens()
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Option 5: Instant Coin Loan System
+                ShopHubOptionCard(
+                    icon = "🪙",
+                    title = if (language == AppLanguage.BENGALI) "ইনস্ট্যান্ট কয়েন লোন সিস্টেম" else "Instant Coin Loan System",
+                    subtitle = if (language == AppLanguage.BENGALI) "১,০০,০০০ কয়েন পর্যন্ত জরুরি লোন • জয়ের পর স্বয়ংক্রিয় পরিশোধ" else "Instant loan up to 100,000 Coins • Repay from winnings",
+                    badge = "LOAN",
+                    badgeColor = Color(0xFFFFD700),
+                    onClick = {
+                        onDismiss()
+                        onOpenCoinLoan()
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ShopHubOptionCard(
+    icon: String,
+    title: String,
+    subtitle: String,
+    badge: String,
+    badgeColor: Color,
+    onClick: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = Color(0xFF0E223D),
+        border = BorderStroke(1.5.dp, Brush.linearGradient(listOf(badgeColor.copy(alpha = 0.8f), Color(0xFF1E3A5F)))),
+        shadowElevation = 6.dp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF071426))
+                        .border(1.5.dp, badgeColor, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(icon, fontSize = 20.sp)
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = title,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.5.sp
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = badgeColor.copy(alpha = 0.2f),
+                            border = BorderStroke(0.8.dp, badgeColor)
+                        ) {
+                            Text(
+                                text = badge,
+                                color = badgeColor,
+                                fontSize = 8.5.sp,
+                                fontWeight = FontWeight.Black,
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = subtitle,
+                        color = Color(0xFF90A4AE),
+                        fontSize = 10.sp,
+                        lineHeight = 12.sp,
+                        maxLines = 2
+                    )
+                }
+            }
+            Text("➜", color = badgeColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+/**
+ * KING MISTRY LUDO ROYALE – 3D SETTINGS POP-UP OVERLAY
+ * [Visual Style & Theme]
+ * - High-end 3D Dark Glassmorphism Modal Pop-Up Window overlaid on top of a blurred dark blue Ludo game home screen background.
+ * - Rounded rectangle card with glowing 3D royal gold neon frame.
+ * - Glossy metallic gold title and crisp white option labels in bold modern gaming font.
+ * 
+ * [Pop-Up Content & Layout (Top to Bottom)]
+ * 1. Header Line: "SETTINGS" with golden royal crown icon on left, glowing red rounded close button [❌] on right.
+ * 2. Sound Option Line: 🎵 Background Music label with 3D Glossy Toggle Switch [ON/OFF] and green neon glow.
+ * 3. Music Option Line: 🔊 Sound Effects label with 3D Glossy Toggle Switch [ON/OFF] and green neon glow.
+ * 4. Language Selection Line: 🌐 Select Language label with 3-button selector: [🇬🇧 English] (active gold outline), [🇮🇳 বাংলা], [🇮🇳 हिन्दी].
+ * 5. Board Theme Line: 🎨 Board Lighting label with 2-button pill toggle: [🌙 Dark Theme] (active cyan glow), [☀️ Classic Theme].
+ * 6. Log Out Button Line: Prominent glossy red & gold 3D action button stating "🚪 LOG OUT".
+ * 7. Footer Info: Centered at very bottom: "King Mistry Ludo Royale v53.0.0".
+ */
+@Composable
+private fun RoyalSettingsDialog(
+    language: AppLanguage,
+    onLanguageChange: (AppLanguage) -> Unit,
+    soundManager: SoundManager,
+    isDarkTheme: Boolean,
+    onToggleDarkTheme: (Boolean) -> Unit,
+    onLogout: () -> Unit,
+    onOpenRules: () -> Unit,
+    onShareApp: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    var bgmEnabled by remember { mutableStateOf(soundManager.isMusicEnabled) }
+    var sfxEnabled by remember { mutableStateOf(soundManager.isSoundEnabled) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(22.dp),
+            color = Color(0xEB061226), // Dark Glassmorphism translucent navy
+            border = BorderStroke(
+                2.5.dp,
+                Brush.linearGradient(
+                    listOf(
+                        Color(0xFFFFEA00), // Royal gold neon
+                        Color(0xFFFFD54F),
+                        Color(0xFFFF9100),
+                        Color(0xFFFFD54F),
+                        Color(0xFFFFEA00)
+                    )
+                )
+            ),
+            shadowElevation = 24.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 6.dp)
+                .shadow(
+                    elevation = 20.dp,
+                    shape = RoundedCornerShape(22.dp),
+                    spotColor = Color(0xFFFFD54F),
+                    ambientColor = Color(0xFFFF9100)
+                )
+                .testTag("royal_settings_dialog")
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(
+                                Color(0xFF10284E).copy(alpha = 0.95f),
+                                Color(0xFF06142A).copy(alpha = 0.98f),
+                                Color(0xFF030A17)
+                            ),
+                            center = Offset(300f, 200f),
+                            radius = 600f
+                        )
+                    )
+                    .padding(horizontal = 18.dp, vertical = 18.dp)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // 1. HEADER LINE: "SETTINGS" + Shiny Golden Royal Crown on Left, Glowing Red Close Button [ ❌ ] on Right
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("👑", fontSize = 24.sp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "SETTINGS",
+                                color = Color(0xFFFFD700),
+                                fontWeight = FontWeight.Black,
+                                fontSize = 19.sp,
+                                letterSpacing = 1.2.sp
+                            )
+                        }
+
+                        // Glowing red rounded close button [ ❌ ]
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(Color(0xFFFF1744), Color(0xFFB71C1C))
+                                    )
+                                )
+                                .border(1.5.dp, Color(0xFFFF8A80), RoundedCornerShape(10.dp))
+                                .shadow(6.dp, RoundedCornerShape(10.dp), spotColor = Color(0xFFFF1744), ambientColor = Color(0xFFFF1744))
+                                .clickable {
+                                    soundManager.playButtonClick()
+                                    onDismiss()
+                                }
+                                .testTag("settings_close_btn"),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "❌",
+                                color = Color.White,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Black
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+                    HorizontalDivider(color = Color(0xFFFFD700).copy(alpha = 0.25f), thickness = 1.dp)
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // 2. SOUND OPTION LINE: 🎵 Background Music label + 3D Glossy Toggle Switch [ ON / OFF ]
+                    SettingToggleRow(
+                        icon = "🎵",
+                        label = if (language == AppLanguage.BENGALI) "Background Music (ব্যাকগ্রাউন্ড মিউজিক)" else "Background Music",
+                        isChecked = bgmEnabled,
+                        onToggle = {
+                            bgmEnabled = !bgmEnabled
+                            soundManager.isMusicEnabled = bgmEnabled
+                            soundManager.playButtonClick()
+                        },
+                        testTag = "settings_bgm_toggle"
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // 3. MUSIC OPTION LINE: 🔊 Sound Effects label + 3D Glossy Toggle Switch [ ON / OFF ]
+                    SettingToggleRow(
+                        icon = "🔊",
+                        label = if (language == AppLanguage.BENGALI) "Sound Effects (সাউন্ড ইফেক্ট)" else "Sound Effects",
+                        isChecked = sfxEnabled,
+                        onToggle = {
+                            sfxEnabled = !sfxEnabled
+                            soundManager.isSoundEnabled = sfxEnabled
+                            soundManager.playButtonClick()
+                        },
+                        testTag = "settings_sfx_toggle"
+                    )
+
+                    Spacer(modifier = Modifier.height(14.dp))
+                    HorizontalDivider(color = Color(0xFFFFD700).copy(alpha = 0.25f), thickness = 1.dp)
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // 4. LANGUAGE SELECTION LINE: 🌐 Select Language label + Horizontal 3-button selector
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("🌐", fontSize = 18.sp)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (language == AppLanguage.BENGALI) "ভাষা নির্বাচন (Select Language)" else "Select Language",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        val languageOptions = listOf(
+                            Triple(AppLanguage.ENGLISH, "🇬🇧 English", "lang_btn_en"),
+                            Triple(AppLanguage.BENGALI, "🇮🇳 বাংলা", "lang_btn_bn"),
+                            Triple(AppLanguage.HINDI, "🇮🇳 हिन्दी", "lang_btn_hi")
+                        )
+
+                        languageOptions.forEach { (lang, label, tag) ->
+                            val isSelected = language == lang
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isSelected) Color(0xFF133256) else Color(0xFF071830),
+                                border = BorderStroke(
+                                    if (isSelected) 2.dp else 1.dp,
+                                    if (isSelected) Color(0xFFFFD700) else Color(0xFF1E3A5F)
+                                ),
+                                shadowElevation = if (isSelected) 8.dp else 2.dp,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(38.dp)
+                                    .shadow(
+                                        elevation = if (isSelected) 6.dp else 0.dp,
+                                        shape = RoundedCornerShape(10.dp),
+                                        spotColor = Color(0xFFFFD700),
+                                        ambientColor = Color(0xFFFFD700)
+                                    )
+                                    .clickable {
+                                        soundManager.playButtonClick()
+                                        onLanguageChange(lang)
+                                    }
+                                    .testTag(tag)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(
+                                            if (isSelected) {
+                                                Brush.verticalGradient(listOf(Color(0xFF1C4274), Color(0xFF0E274A)))
+                                            } else {
+                                                Brush.verticalGradient(listOf(Color(0xFF0B1F3D), Color(0xFF051226)))
+                                            }
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = label,
+                                        color = if (isSelected) Color(0xFFFFD54F) else Color(0xFFCFD8DC),
+                                        fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold,
+                                        fontSize = 11.5.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+                    HorizontalDivider(color = Color(0xFFFFD700).copy(alpha = 0.25f), thickness = 1.dp)
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // 5. BOARD THEME LINE: 🎨 Board Lighting label + 2-button pill toggle [ 🌙 Dark Theme ] / [ ☀️ Classic Theme ]
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("🎨", fontSize = 18.sp)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (language == AppLanguage.BENGALI) "বোর্ড লাইটিং (Board Lighting)" else "Board Lighting",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Option A: 🌙 Dark Theme
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isDarkTheme) Color(0xFF003B57) else Color(0xFF071930),
+                            border = BorderStroke(
+                                if (isDarkTheme) 2.dp else 1.dp,
+                                if (isDarkTheme) Color(0xFF00E5FF) else Color(0xFF1E3A5F)
+                            ),
+                            shadowElevation = if (isDarkTheme) 8.dp else 2.dp,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(40.dp)
+                                .shadow(
+                                    elevation = if (isDarkTheme) 6.dp else 0.dp,
+                                    shape = RoundedCornerShape(12.dp),
+                                    spotColor = Color(0xFF00E5FF),
+                                    ambientColor = Color(0xFF00E5FF)
+                                )
+                                .clickable {
+                                    soundManager.playButtonClick()
+                                    onToggleDarkTheme(true)
+                                }
+                                .testTag("theme_dark_btn")
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        if (isDarkTheme) Brush.verticalGradient(listOf(Color(0xFF004D73), Color(0xFF00223D)))
+                                        else Brush.verticalGradient(listOf(Color(0xFF0A2244), Color(0xFF021329)))
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("🌙", fontSize = 15.sp)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Dark Theme",
+                                        color = if (isDarkTheme) Color(0xFF00E5FF) else Color(0xFF90A4AE),
+                                        fontWeight = if (isDarkTheme) FontWeight.Black else FontWeight.Bold,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
+                        }
+
+                        // Option B: ☀️ Classic Theme
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (!isDarkTheme) Color(0xFF4A3400) else Color(0xFF071930),
+                            border = BorderStroke(
+                                if (!isDarkTheme) 2.dp else 1.dp,
+                                if (!isDarkTheme) Color(0xFFFFD700) else Color(0xFF1E3A5F)
+                            ),
+                            shadowElevation = if (!isDarkTheme) 8.dp else 2.dp,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(40.dp)
+                                .shadow(
+                                    elevation = if (!isDarkTheme) 6.dp else 0.dp,
+                                    shape = RoundedCornerShape(12.dp),
+                                    spotColor = Color(0xFFFFD700),
+                                    ambientColor = Color(0xFFFFD700)
+                                )
+                                .clickable {
+                                    soundManager.playButtonClick()
+                                    onToggleDarkTheme(false)
+                                }
+                                .testTag("theme_classic_btn")
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        if (!isDarkTheme) Brush.verticalGradient(listOf(Color(0xFF5D4037), Color(0xFF2E1C03)))
+                                        else Brush.verticalGradient(listOf(Color(0xFF0A2244), Color(0xFF021329)))
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("☀️", fontSize = 15.sp)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Classic Theme",
+                                        color = if (!isDarkTheme) Color(0xFFFFD700) else Color(0xFF90A4AE),
+                                        fontWeight = if (!isDarkTheme) FontWeight.Black else FontWeight.Bold,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // 6. LOG OUT BUTTON LINE: Prominent glossy red & gold 3D action button "🚪 LOG OUT"
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = Color(0xFFB71C1C),
+                        border = BorderStroke(
+                            2.dp,
+                            Brush.horizontalGradient(
+                                listOf(Color(0xFFFFD54F), Color(0xFFFF1744), Color(0xFFFFD54F))
+                            )
+                        ),
+                        shadowElevation = 10.dp,
+                        modifier = Modifier
+                            .fillMaxWidth(0.85f)
+                            .height(46.dp)
+                            .shadow(
+                                8.dp,
+                                RoundedCornerShape(14.dp),
+                                spotColor = Color(0xFFFF1744),
+                                ambientColor = Color(0xFFFFD54F)
+                            )
+                            .clickable {
+                                soundManager.playButtonClick()
+                                onLogout()
+                            }
+                            .testTag("settings_logout_btn")
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(
+                                            Color(0xFFD50000),
+                                            Color(0xFF8B0000)
+                                        )
+                                    )
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Text("🚪", fontSize = 18.sp)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "LOG OUT",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 15.sp,
+                                    letterSpacing = 1.0.sp
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // 7. FOOTER INFO: Centered at the very bottom in subtle metallic grey text
+                    Text(
+                        text = "King Mistry Ludo Royale v90",
+                        color = Color(0xFF90A4AE),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp,
+                        letterSpacing = 0.5.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 3D Glossy Toggle Switch [ ON / OFF ] with active green neon glow
+ */
+@Composable
+private fun SettingToggleRow(
+    icon: String,
+    label: String,
+    isChecked: Boolean,
+    onToggle: () -> Unit,
+    testTag: String
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = Color(0xFF081830),
+        border = BorderStroke(1.2.dp, Color(0xFF1E3A5F)),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(44.dp)
+            .clickable(onClick = onToggle)
+            .testTag(testTag)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(icon, fontSize = 18.sp)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = label,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.5.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            // 3D Glossy Toggle Switch [ ON / OFF ]
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = if (isChecked) Color(0xFF00E676) else Color(0xFF263238),
+                border = BorderStroke(
+                    1.5.dp,
+                    if (isChecked) Color(0xFFB9F6CA) else Color(0xFF455A64)
+                ),
+                shadowElevation = if (isChecked) 8.dp else 2.dp,
+                modifier = Modifier
+                    .width(62.dp)
+                    .height(28.dp)
+                    .shadow(
+                        elevation = if (isChecked) 6.dp else 0.dp,
+                        shape = RoundedCornerShape(16.dp),
+                        spotColor = Color(0xFF00E676),
+                        ambientColor = Color(0xFF00E676)
+                    )
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            if (isChecked) {
+                                Brush.horizontalGradient(
+                                    listOf(Color(0xFF00C853), Color(0xFF00E676))
+                                )
+                            } else {
+                                Brush.horizontalGradient(
+                                    listOf(Color(0xFF37474F), Color(0xFF263238))
+                                )
+                            }
+                        )
+                        .padding(horizontal = 4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = if (isChecked) Arrangement.End else Arrangement.Start
+                    ) {
+                        if (isChecked) {
+                            Text(
+                                text = "ON",
+                                color = Color(0xFF003314),
+                                fontWeight = FontWeight.Black,
+                                fontSize = 10.sp,
+                                modifier = Modifier.padding(end = 4.dp)
+                            )
+                        }
+
+                        // Knob
+                        Box(
+                            modifier = Modifier
+                                .size(20.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.radialGradient(
+                                        listOf(Color.White, Color(0xFFECEFF1))
+                                    )
+                                )
+                                .border(1.dp, Color.White, CircleShape)
+                        )
+
+                        if (!isChecked) {
+                            Text(
+                                text = "OFF",
+                                color = Color(0xFFB0BEC5),
+                                fontWeight = FontWeight.Black,
+                                fontSize = 9.sp,
+                                modifier = Modifier.padding(start = 4.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// =============================================================================
+// GAME MODE BADGES & ICONS (Exact Replica of 104683.png)
+// =============================================================================
+
+/**
+ * Three-pawn setup (Red, Yellow, Green) with 3D glossy shine as in 104683.png
+ */
+@Composable
+private fun GlossyThreePawnsBadge() {
+    Canvas(modifier = Modifier.size(56.dp, 30.dp)) {
+        val totalWidth = size.width
+        val h = size.height
+
+        val pawnColors = listOf(
+            Triple(Color(0xFFFF1744), Color(0xFFB71C1C), Color(0xFFFF8A80)), // Red
+            Triple(Color(0xFFFFD600), Color(0xFFF57F17), Color(0xFFFFF9C4)), // Yellow
+            Triple(Color(0xFF00E676), Color(0xFF1B5E20), Color(0xFFB9F6CA))  // Green
+        )
+
+        val pawnW = totalWidth / 3.3f
+        val gap = (totalWidth - pawnW * 3f) / 2f
+
+        pawnColors.forEachIndexed { index, (mainColor, darkColor, lightColor) ->
+            val cx = index * (pawnW + gap) + pawnW / 2f
+
+            // Skirt Base Path
+            val basePath = Path().apply {
+                moveTo(cx - pawnW * 0.44f, h * 0.96f)
+                lineTo(cx + pawnW * 0.44f, h * 0.96f)
+                lineTo(cx + pawnW * 0.26f, h * 0.48f)
+                lineTo(cx - pawnW * 0.26f, h * 0.48f)
+                close()
+            }
+            drawPath(
+                path = basePath,
+                brush = Brush.horizontalGradient(
+                    listOf(darkColor, mainColor, lightColor, mainColor, darkColor),
+                    startX = cx - pawnW * 0.44f,
+                    endX = cx + pawnW * 0.44f
+                )
+            )
+
+            // Neck ring
+            drawRoundRect(
+                brush = Brush.horizontalGradient(listOf(darkColor, lightColor, darkColor)),
+                topLeft = Offset(cx - pawnW * 0.25f, h * 0.42f),
+                size = Size(pawnW * 0.5f, h * 0.08f),
+                cornerRadius = CornerRadius(2f, 2f)
+            )
+
+            // Head Sphere
+            val headRadius = pawnW * 0.32f
+            val headCenter = Offset(cx, h * 0.25f)
+            drawCircle(
+                brush = Brush.radialGradient(
+                    listOf(lightColor, mainColor, darkColor),
+                    center = Offset(headCenter.x - headRadius * 0.28f, headCenter.y - headRadius * 0.28f),
+                    radius = headRadius * 1.25f
+                ),
+                radius = headRadius,
+                center = headCenter
+            )
+
+            // Glossy Shine Highlight on Head
+            drawCircle(
+                color = Color.White.copy(alpha = 0.85f),
+                radius = headRadius * 0.26f,
+                center = Offset(headCenter.x - headRadius * 0.3f, headCenter.y - headRadius * 0.3f)
+            )
+
+            // Base Rim
+            drawRoundRect(
+                brush = Brush.horizontalGradient(listOf(darkColor, mainColor, lightColor, darkColor)),
+                topLeft = Offset(cx - pawnW * 0.46f, h * 0.88f),
+                size = Size(pawnW * 0.92f, h * 0.12f),
+                cornerRadius = CornerRadius(4f, 4f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun ColoredUserBadge(bgColor: Color) {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = bgColor,
+        border = BorderStroke(1.8.dp, Color(0xFFFFD54F)),
+        modifier = Modifier.size(31.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(Icons.Filled.Person, contentDescription = null, tint = Color.White, modifier = Modifier.size(19.dp))
+        }
+    }
+}
+
+/**
+ * Four-pawn setup (Red, Yellow, Green, Blue) with 3D glossy shine as in Offline Mode screenshot
+ */
+@Composable
+private fun GlossyFourPawnsBadge() {
+    Canvas(modifier = Modifier.size(66.dp, 30.dp)) {
+        val totalWidth = size.width
+        val h = size.height
+
+        val pawnColors = listOf(
+            Triple(Color(0xFFFF1744), Color(0xFFB71C1C), Color(0xFFFF8A80)), // Red
+            Triple(Color(0xFFFFD600), Color(0xFFF57F17), Color(0xFFFFF9C4)), // Yellow
+            Triple(Color(0xFF00E676), Color(0xFF1B5E20), Color(0xFFB9F6CA)), // Green
+            Triple(Color(0xFF2979FF), Color(0xFF0D47A1), Color(0xFF82B1FF))  // Blue
+        )
+
+        val pawnW = totalWidth / 4.4f
+        val gap = (totalWidth - pawnW * 4f) / 3f
+
+        pawnColors.forEachIndexed { index, (mainColor, darkColor, lightColor) ->
+            val cx = index * (pawnW + gap) + pawnW / 2f
+
+            // Skirt Base Path
+            val basePath = Path().apply {
+                moveTo(cx - pawnW * 0.44f, h * 0.96f)
+                lineTo(cx + pawnW * 0.44f, h * 0.96f)
+                lineTo(cx + pawnW * 0.26f, h * 0.48f)
+                lineTo(cx - pawnW * 0.26f, h * 0.48f)
+                close()
+            }
+            drawPath(
+                path = basePath,
+                brush = Brush.horizontalGradient(
+                    listOf(darkColor, mainColor, lightColor, mainColor, darkColor),
+                    startX = cx - pawnW * 0.44f,
+                    endX = cx + pawnW * 0.44f
+                )
+            )
+
+            // Neck ring
+            drawRoundRect(
+                brush = Brush.horizontalGradient(listOf(darkColor, lightColor, darkColor)),
+                topLeft = Offset(cx - pawnW * 0.25f, h * 0.42f),
+                size = Size(pawnW * 0.5f, h * 0.08f),
+                cornerRadius = CornerRadius(2f, 2f)
+            )
+
+            // Head Sphere
+            val headRadius = pawnW * 0.32f
+            val headCenter = Offset(cx, h * 0.25f)
+            drawCircle(
+                brush = Brush.radialGradient(
+                    listOf(lightColor, mainColor, darkColor),
+                    center = Offset(headCenter.x - headRadius * 0.28f, headCenter.y - headRadius * 0.28f),
+                    radius = headRadius * 1.25f
+                ),
+                radius = headRadius,
+                center = headCenter
+            )
+
+            // Glossy Shine Highlight on Head
+            drawCircle(
+                color = Color.White.copy(alpha = 0.85f),
+                radius = headRadius * 0.26f,
+                center = Offset(headCenter.x - headRadius * 0.3f, headCenter.y - headRadius * 0.3f)
+            )
+
+            // Base Rim
+            drawRoundRect(
+                brush = Brush.horizontalGradient(listOf(darkColor, mainColor, lightColor, darkColor)),
+                topLeft = Offset(cx - pawnW * 0.46f, h * 0.88f),
+                size = Size(pawnW * 0.92f, h * 0.12f),
+                cornerRadius = CornerRadius(4f, 4f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun UserBadge() {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = Color(0xFF0091EA),
+        border = BorderStroke(1.8.dp, Color(0xFFFFD54F)),
+        modifier = Modifier.size(31.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(Icons.Filled.Person, contentDescription = null, tint = Color.White, modifier = Modifier.size(19.dp))
+        }
+    }
+}
+
+@Composable
+private fun GroupsBadge() {
+    Surface(
+        shape = CircleShape,
+        color = Color(0xFF00C853),
+        border = BorderStroke(1.8.dp, Color(0xFFFFD54F)),
+        modifier = Modifier.size(31.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(Icons.Filled.Group, contentDescription = null, tint = Color.White, modifier = Modifier.size(19.dp))
+        }
+    }
+}
+
+@Composable
+private fun CrownBadge() {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = Color(0xFF041C38),
+        border = BorderStroke(1.8.dp, Color(0xFFFFD54F)),
+        modifier = Modifier.size(31.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text("👑", fontSize = 17.sp)
+        }
+    }
+}
+
+@Composable
+private fun GlobeBadge() {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = Color(0xFF041C38),
+        border = BorderStroke(1.8.dp, Color(0xFFFFD54F)),
+        modifier = Modifier.size(31.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text("🌐", fontSize = 17.sp)
+        }
+    }
+}
+
+@Composable
+private fun OnlineLivePillBadge() {
+    Surface(
+        shape = RoundedCornerShape(10.dp),
+        color = Color(0xFF00C853),
+        border = BorderStroke(1.4.dp, Color(0xFF00E676)),
+        modifier = Modifier.height(26.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(7.dp)
+                    .clip(CircleShape)
+                    .background(Color.White)
+            )
+            Spacer(modifier = Modifier.width(5.dp))
+            Text("ONLINE", color = Color.White, fontWeight = FontWeight.Black, fontSize = 10.sp)
+        }
+    }
+}
+
+@Composable
+private fun TrophyBadge() {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = Color(0xFF041C38),
+        border = BorderStroke(1.8.dp, Color(0xFFFFD54F)),
+        modifier = Modifier.size(31.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(Icons.Filled.EmojiEvents, contentDescription = null, tint = Color(0xFFFFD54F), modifier = Modifier.size(19.dp))
+        }
+    }
+}
+
+@Composable
+private fun LadderBadge() {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = Color(0xFF041C38),
+        border = BorderStroke(1.8.dp, Color(0xFFFFD54F)),
+        modifier = Modifier.size(31.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text("🪜", fontSize = 17.sp)
+        }
+    }
+}
+
+@Composable
+private fun SnakeBadge() {
+    Surface(
+        shape = CircleShape,
+        color = Color(0xFF1B5E20),
+        border = BorderStroke(1.8.dp, Color(0xFFFFD54F)),
+        modifier = Modifier.size(31.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text("🐍", fontSize = 17.sp)
+        }
+    }
+}
+
+@Composable
+private fun HundredRandomBadge() {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = Color(0xFF041C38),
+        border = BorderStroke(1.8.dp, Color(0xFFFFD54F)),
+        modifier = Modifier.size(48.dp, 28.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "100",
+                color = Color(0xFF00E5FF),
+                fontWeight = FontWeight.Black,
+                fontSize = 10.sp
+            )
+            Text(
+                text = "RANDOM",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 6.8.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun WhiteDiceBadge() {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = Color(0xFF041C38),
+        border = BorderStroke(1.8.dp, Color(0xFFFFD54F)),
+        shadowElevation = 3.dp,
+        modifier = Modifier.size(31.dp)
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Canvas(modifier = Modifier.size(20.dp)) {
+                // White rounded square die face
+                drawRoundRect(
+                    color = Color.White,
+                    cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx())
+                )
+                // Subtle die outline
+                drawRoundRect(
+                    color = Color(0xFFCFD8DC),
+                    cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx()),
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 0.8.dp.toPx())
+                )
+                // 5 black dots (pips)
+                val dotR = 1.4.dp.toPx()
+                val left = size.width * 0.28f
+                val midX = size.width * 0.5f
+                val right = size.width * 0.72f
+                val top = size.height * 0.28f
+                val midY = size.height * 0.5f
+                val bot = size.height * 0.72f
+
+                drawCircle(Color.Black, radius = dotR, center = Offset(left, top))
+                drawCircle(Color.Black, radius = dotR, center = Offset(right, top))
+                drawCircle(Color.Black, radius = dotR, center = Offset(midX, midY))
+                drawCircle(Color.Black, radius = dotR, center = Offset(left, bot))
+                drawCircle(Color.Black, radius = dotR, center = Offset(right, bot))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ControllerBadge() {
+    Surface(
+        shape = RoundedCornerShape(7.dp),
+        color = Color(0xFF041C38),
+        border = BorderStroke(1.8.dp, Color(0xFFFFD54F)),
+        modifier = Modifier.size(28.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text("🎮", fontSize = 15.sp)
+        }
+    }
+}
+
+@Composable
+private fun RobotBadge() {
+    Surface(
+        shape = CircleShape,
+        color = Color(0xFF311B92),
+        border = BorderStroke(1.8.dp, Color(0xFFFFD54F)),
+        modifier = Modifier.size(28.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text("🤖", fontSize = 15.sp)
+        }
+    }
+}
+
+@Composable
+private fun DuetPlayerBadge(color: Color, label: String) {
+    Surface(
+        shape = CircleShape,
+        color = color,
+        border = BorderStroke(1.8.dp, Color(0xFFFFD54F)),
+        modifier = Modifier.size(31.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = label,
+                color = Color.White,
+                fontWeight = FontWeight.Black,
+                fontSize = 12.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun VsBadge() {
+    Surface(
+        shape = RoundedCornerShape(7.dp),
+        color = Color(0xFF041C38),
+        border = BorderStroke(1.8.dp, Color(0xFFFFD54F)),
+        modifier = Modifier.size(40.dp, 26.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = "VS",
+                color = Color.White,
+                fontWeight = FontWeight.Black,
+                fontSize = 12.sp,
+                letterSpacing = 0.8.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun Players24Badge() {
+    Surface(
+        shape = RoundedCornerShape(7.dp),
+        color = Color(0xFF00E5FF).copy(alpha = 0.18f),
+        border = BorderStroke(1.2.dp, Color(0xFF00E5FF)),
+        modifier = Modifier.height(24.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("👥 2-4P", color = Color(0xFF00E5FF), fontWeight = FontWeight.Bold, fontSize = 9.sp)
+        }
+    }
+}
+
+@Composable
+private fun SafePuckIcon(
+    puckSet: CarromPuckSet?,
+    modifier: Modifier = Modifier
+) {
+    val safeSet = puckSet ?: CarromPuckSet.TOKEN_1
+    val resId = if (safeSet.singleDrawableRes != 0) safeSet.singleDrawableRes else R.drawable.token_1
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = painterResource(id = resId),
+            contentDescription = "Carrom Coins & Tokens",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Fit
+        )
+    }
+}
+
+@Composable
+private fun SafeStrikerIcon(
+    striker: CarromStriker?,
+    modifier: Modifier = Modifier
+) {
+    val safeStriker = striker ?: CarromStriker.STRIKER_1
+    val resId = if (safeStriker.drawableRes != 0) safeStriker.drawableRes else R.drawable.striker_1
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = painterResource(id = resId),
+            contentDescription = "Carrom Striker Arsenal",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Fit
+        )
+    }
+}
+
+/**
+ * 5-Button Bottom Navigation Item (3D Glossy Icon on top, crisp text label underneath)
+ */
+@Composable
+private fun BottomNavItem(
+    modifier: Modifier = Modifier,
+    icon: @Composable () -> Unit,
+    label: String,
+    isActive: Boolean,
+    onClick: () -> Unit,
+    testTag: String
+) {
+    Surface(
+        onClick = {
+            try {
+                onClick()
+            } catch (e: Exception) {
+                android.util.Log.e("BottomNavItem", "Click error on $testTag", e)
+            }
+        },
+        shape = RoundedCornerShape(14.dp),
+        color = Color(0xFF031630),
+        border = BorderStroke(
+            if (isActive) 2.2.dp else 1.4.dp,
+            if (isActive) Brush.linearGradient(listOf(Color(0xFFFFEA00), Color(0xFFFFD54F), Color(0xFFFF9100)))
+            else Brush.linearGradient(listOf(Color(0xFF00E5FF).copy(alpha = 0.75f), Color(0xFF0D47A1)))
+        ),
+        shadowElevation = if (isActive) 12.dp else 4.dp,
+        modifier = modifier
+            .fillMaxHeight()
+            .shadow(
+                elevation = if (isActive) 12.dp else 4.dp,
+                shape = RoundedCornerShape(14.dp),
+                spotColor = if (isActive) Color(0xFFFFEA00) else Color(0xFF00E5FF),
+                ambientColor = if (isActive) Color(0xFFFFB300) else Color(0xFF00B0FF)
+            )
+            .testTag(testTag)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    if (isActive) {
+                        Brush.verticalGradient(
+                            listOf(Color(0xFF224578), Color(0xFF071B38))
+                        )
+                    } else {
+                        Brush.verticalGradient(
+                            listOf(Color(0xFF0A2244), Color(0xFF021329))
+                        )
+                    }
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(vertical = 4.dp, horizontal = 2.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                // Top: Enlarged 3D Glossy Icon
+                Box(
+                    modifier = Modifier.size(28.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    icon()
+                }
+                Spacer(modifier = Modifier.height(3.dp))
+                // Bottom: Bold Readable Text Label
+                Text(
+                    text = label,
+                    color = if (isActive) Color(0xFFFFEA00) else Color(0xFFCFD8DC),
+                    fontWeight = if (isActive) FontWeight.Black else FontWeight.ExtraBold,
+                    fontSize = if (label.length > 9) 8.5.sp else 9.5.sp,
+                    letterSpacing = 0.1.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
+}
+
+
+/**
+ * Immediate Pop-up Warning Notification when Internet is required but disconnected.
+ * States: "No internet connection. Please check your network."
+ */
+@Composable
+private fun NoInternetDialog(
+    language: AppLanguage,
+    onDismiss: () -> Unit,
+    onSwitchToOffline: () -> Unit = {}
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(22.dp),
+            color = Color(0xFF071B33),
+            border = BorderStroke(
+                width = 2.2.dp,
+                brush = Brush.verticalGradient(
+                    listOf(
+                        Color(0xFFFF5252),
+                        Color(0xFFFFD54F),
+                        Color(0xFFFF5252)
+                    )
+                )
+            ),
+            shadowElevation = 24.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+                .testTag("no_internet_dialog")
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(22.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Warning / Disconnected Icon with pulse
+                Surface(
+                    shape = CircleShape,
+                    color = Color(0xFFD32F2F).copy(alpha = 0.25f),
+                    border = BorderStroke(2.dp, Color(0xFFFF5252)),
+                    modifier = Modifier.size(56.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text("📡", fontSize = 28.sp)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Title
+                Text(
+                    text = if (language == AppLanguage.BENGALI) "ইন্টারনেট সংযোগ নেই" else "No Connection",
+                    color = Color(0xFFFF5252),
+                    fontWeight = FontWeight.Black,
+                    fontSize = 18.sp
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Required Warning Message
+                Text(
+                    text = "No internet connection. Please check your network.",
+                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Center
+                )
+
+                if (language == AppLanguage.BENGALI) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "অনলাইন খেলার জন্য ইন্টারনেট সংযোগ চালু করুন অথবা অফলাইন মোড খেলুন।",
+                        color = Color(0xFFB0BEC5),
+                        fontSize = 12.sp,
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                Button(
+                    onClick = onSwitchToOffline,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD600)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp)
+                        .testTag("no_internet_switch_offline_btn")
+                ) {
+                    Text(
+                        text = if (language == AppLanguage.BENGALI) "🎮 অফলাইন মোডে খেলুন" else "🎮 Play Offline Mode",
+                        color = Color(0xFF04152D),
+                        fontWeight = FontWeight.Black,
+                        fontSize = 13.5.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedButton(
+                    onClick = onDismiss,
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, Color(0xFF78909C)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(40.dp)
+                        .testTag("no_internet_ok_btn")
+                ) {
+                    Text(
+                        text = if (language == AppLanguage.BENGALI) "ঠিক আছে" else "OK",
+                        color = Color(0xFFCFD8DC),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 12. Carrom Pool Lounge Dialog
+ * Interactive 3D Gold & Neon Blue Modal for Carrom Pool matches
+ */
+@Composable
+private fun CarromPoolLoungeDialog(
+    isOnline: Boolean,
+    language: AppLanguage,
+    userName: String,
+    onStartCarrom: (playerCount: Int, playerNames: List<String>, mode: CarromGameMode) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var selectedMode by remember { mutableStateOf(CarromGameMode.STANDARD) }
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = Color(0xFF031630),
+            border = BorderStroke(
+                2.2.dp,
+                Brush.linearGradient(
+                    listOf(Color(0xFF00E5FF), Color(0xFFFFD54F), Color(0xFF00E5FF))
+                )
+            ),
+            shadowElevation = 18.dp,
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .widthIn(max = 460.dp)
+                .padding(vertical = 12.dp)
+                .testTag("carrom_pool_dialog")
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Header with Carrom Queen Icon
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            shape = CircleShape,
+                            color = Color(0xFFFFD54F),
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text("🎯", fontSize = 18.sp)
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                text = if (language == AppLanguage.BENGALI) "ক্যারাম পুল ১v১" else "CARROM POOL 1v1",
+                                color = Color(0xFFFFEA00),
+                                fontWeight = FontWeight.Black,
+                                fontSize = 17.sp,
+                                letterSpacing = 0.5.sp
+                            )
+                            Text(
+                                text = if (isOnline) {
+                                    if (language == AppLanguage.BENGALI) "অনলাইন রিয়েলটাইম ম্যাচ" else "Online Realtime Match"
+                                } else {
+                                    if (language == AppLanguage.BENGALI) "লোকাল পাস অ্যান্ড প্লে মোড" else "Local Pass & Play Mode"
+                                },
+                                color = Color(0xFF80D8FF),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 10.sp
+                            )
+                        }
+                    }
+
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF132B4F))
+                    ) {
+                        Icon(Icons.Filled.Close, contentDescription = "Close", tint = Color.White, modifier = Modifier.size(18.dp))
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // 3D Carrom Board Card Preview
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = Color(0xFF071F42),
+                    border = BorderStroke(1.5.dp, Color(0xFF00E5FF)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(110.dp)
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(R.drawable.art_carrom_board_3d)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = "Carrom Board with NM Logo",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Fit
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(Color.Transparent, Color(0xCC041226))
+                                    )
+                                )
+                        )
+                        Row(
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = Color(0xFFFF9100)
+                            ) {
+                                Text(
+                                    text = "3D SMOOTH PHYSICS",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 8.5.sp,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "🏆 500 Coins Entry",
+                                color = Color(0xFFFFD54F),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Match details
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFF071B38))
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = if (language == AppLanguage.BENGALI) "খেলোয়াড় ১:" else "Player 1:",
+                            color = Color(0xFF90A4AE),
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(text = userName, color = Color.White, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = if (language == AppLanguage.BENGALI) "প্রতিপক্ষ:" else "Opponent:",
+                            color = Color(0xFF90A4AE),
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = if (isOnline) "Live Striker (Online)" else (if (language == AppLanguage.BENGALI) "খেলোয়াড় ২ (Local)" else "Player 2 (Local)"),
+                            color = Color(0xFF00E5FF),
+                            fontWeight = FontWeight.Black,
+                            fontSize = 12.sp
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = if (language == AppLanguage.BENGALI) "বোর্ড রুলস:" else "Board Rules:",
+                            color = Color(0xFF90A4AE),
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = if (language == AppLanguage.BENGALI) selectedMode.badgeBn else selectedMode.badgeEn,
+                            color = Color(0xFFFFEA00),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Mode Switcher Pills for Offline/Pool 1v1
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    CarromGameMode.entries.forEach { modeOption ->
+                        val selected = (selectedMode == modeOption)
+                        val label = when (modeOption) {
+                            CarromGameMode.STANDARD -> if (language == AppLanguage.BENGALI) "স্ট্যান্ডার্ড" else "Standard"
+                            CarromGameMode.NO_QUEEN -> if (language == AppLanguage.BENGALI) "নো কুইন" else "No Queen"
+                            CarromGameMode.FOGGY -> if (language == AppLanguage.BENGALI) "ফগি ১৬০" else "Foggy 160"
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (selected) Color(0xFFFFD54F) else Color(0xFF0A2142),
+                            border = BorderStroke(1.dp, if (selected) Color(0xFFFFEA00) else Color(0xFF1F3C66)),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { selectedMode = modeOption }
+                        ) {
+                            Text(
+                                text = label,
+                                color = if (selected) Color(0xFF041226) else Color.White,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 10.sp,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(vertical = 7.dp)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Start Action Button
+                Button(
+                    onClick = {
+                        val p2 = if (isOnline) "Live Striker" else "Player 2"
+                        onStartCarrom(2, listOf(userName, p2), selectedMode)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .testTag("start_carrom_pool_btn"),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                    contentPadding = PaddingValues()
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(Color(0xFF00E5FF), Color(0xFF0091EA), Color(0xFF0D47A1))
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("⚡", fontSize = 16.sp)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = if (language == AppLanguage.BENGALI) "ক্যারাম ম্যাচ শুরু করুন" else "START CARROM MATCH",
+                                color = Color.White,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 14.sp,
+                                letterSpacing = 0.5.sp
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
