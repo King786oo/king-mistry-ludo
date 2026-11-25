@@ -105,7 +105,7 @@ dependencies {
   implementation(libs.coil.compose)
   implementation(libs.converter.moshi)
   implementation(libs.firebase.ai)
-  implementation(libs.firebase.database)
+  // implementation(libs.firebase.database)
   // Uncomment to use Firestore:
   // implementation(libs.firebase.firestore)
 
@@ -123,8 +123,8 @@ dependencies {
   implementation(libs.moshi.kotlin)
   implementation(libs.okhttp)
   // implementation(libs.play.services.location)
-  implementation(libs.play.services.ads)
-  implementation(libs.play.billing)
+  // implementation(libs.play.services.ads)
+  // implementation(libs.play.billing)
   implementation(libs.retrofit)
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)
