@@ -17,20 +17,23 @@ android {
     applicationId = "com.aistudio.ludoclassic.kznr"
     minSdk = 24
     targetSdk = 36
-    versionCode = 59
-    versionName = "59.0"
-
+    versionCode = 90
+    versionName = "90"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
 
   signingConfigs {
     create("release") {
-      val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
+      val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/release.jks"
       storeFile = file(keystorePath)
-      storePassword = System.getenv("STORE_PASSWORD")
-      keyAlias = "upload"
-      keyPassword = System.getenv("KEY_PASSWORD")
+      storePassword = System.getenv("STORE_PASSWORD") ?: "KingMistry2026@"
+      keyAlias = System.getenv("KEY_ALIAS") ?: "kingmistryludo"
+      keyPassword = System.getenv("KEY_PASSWORD") ?: "KingMistry2026@"
+      enableV1Signing = true
+      enableV2Signing = true
+      enableV3Signing = true
+      enableV4Signing = true
     }
     create("debugConfig") {
       storeFile = file("${rootDir}/debug.keystore")
@@ -45,8 +48,7 @@ android {
       isCrunchPngs = false
       isMinifyEnabled = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-          signingConfig = signingConfigs.getByName("debugConfig")
-
+      signingConfig = signingConfigs.getByName("release")
     }
     debug { signingConfig = signingConfigs.getByName("debugConfig") }
   }
@@ -100,9 +102,10 @@ dependencies {
   // implementation(libs.androidx.navigation.compose)
   implementation(libs.androidx.room.ktx)
   implementation(libs.androidx.room.runtime)
-  // implementation(libs.coil.compose)
+  implementation(libs.coil.compose)
   implementation(libs.converter.moshi)
   implementation(libs.firebase.ai)
+  implementation(libs.firebase.database)
   // Uncomment to use Firestore:
   // implementation(libs.firebase.firestore)
 
@@ -120,6 +123,8 @@ dependencies {
   implementation(libs.moshi.kotlin)
   implementation(libs.okhttp)
   // implementation(libs.play.services.location)
+  implementation(libs.play.services.ads)
+  implementation(libs.play.billing)
   implementation(libs.retrofit)
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)
@@ -137,4 +142,6 @@ dependencies {
   androidTestImplementation(libs.androidx.runner)
   debugImplementation(libs.androidx.compose.ui.test.manifest)
   debugImplementation(libs.androidx.compose.ui.tooling)
+  "ksp"(libs.androidx.room.compiler)
+  "ksp"(libs.moshi.kotlin.codegen)
 }
