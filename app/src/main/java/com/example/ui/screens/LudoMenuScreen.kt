@@ -2398,7 +2398,7 @@ fun LudoMenuScreen(
                         isOnlineTab,
                         1,
                         if (isOnlineTab) 500 else 0,
-                        chosenMode
+chosenMode
                     )
                 } catch (t: Throwable) {
                     android.util.Log.e("LudoMenuScreen", "Failed starting Carrom Pool match", t)
